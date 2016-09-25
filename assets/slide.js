@@ -9,17 +9,12 @@ next.addEventListener('click', function(){
     slider.next();
 });
 
-function css(elem, styles){
-    for(var k in styles){
-        elem.style[k] = styles[k];
-    }
-}
-
-function Slider(main){
+function Slider(elem){
     this._currIndex = 0;
-    this._container = main;
-    this._containerWidth = main.clientWidth || 320;
-    this._items = main.querySelectorAll('.slide');
+    this._element = elem;
+    this._containerWidth = elem.clientWidth || 320;
+    this._duration = '.5s';
+    this._items = elem.querySelectorAll('.slide');
     this._itemsCount = this._items.length;
     this._animating = false;
     this._touching = false;
@@ -28,20 +23,16 @@ function Slider(main){
 }
 Slider.prototype._init = function(){
     this._setLayout();
-    this._binds();
+    if(this._itemsCount >= 3){
+        this._binds();
+    }
 };
 Slider.prototype._binds = function(){
-    this._container.addEventListener('webkitTransitionEnd', this._transitionEnd.bind(this));
-    this._container.addEventListener('transitionend', this._transitionEnd.bind(this));
-    this._container.addEventListener('touchstart', this._touchStart.bind(this));
-    this._container.addEventListener('touchmove', this._touchMove.bind(this));
-    this._container.addEventListener('touchend', this._touchEnd.bind(this));
-};
-Slider.prototype._transitionEnd = function(){
-    for(var i= 0, len=this._items.length; i<len; i++){
-        this._items[i].classList.remove('og-transition');
-    }
-    this._animating	= false;
+    this._element.addEventListener('webkitTransitionEnd', this._onTransitionEnd.bind(this));
+    this._element.addEventListener('transitionend', this._onTransitionEnd.bind(this));
+    this._element.addEventListener('touchstart', this._onTouchStart.bind(this));
+    this._element.addEventListener('touchmove', this._onTouchMove.bind(this));
+    this._element.addEventListener('touchend', this._onTouchEnd.bind(this));
 };
 Slider.prototype.next = function(){
     this._move(1);
@@ -62,26 +53,25 @@ Slider.prototype._move = function(dir){
             this._currIndex ++;
         }
 
+        this._setDuration(this._currItem, this._duration);
+        this._setDuration(this._rightItem, this._duration);
         // current item moves left
-        this._currItem.classList.add('og-transition');
-        this._rightItem.classList.add('og-transition');
-        css( this._currItem, this._layouts['left'] );
-
+        this._css( this._currItem, this._layouts['left'] );
         // right item moves to the center
-        css( this._rightItem, this._layouts['center'] );
+        this._css( this._rightItem, this._layouts['center'] );
 
         // next item moves to the right
         if( this._nextItem ) {
-            this._leftItem.classList.add('og-transition');
-            this._nextItem.classList.add('og-transition');
+            this._setDuration(this._leftItem, this._duration);
+            this._setDuration(this._nextItem, this._duration);
             // left item moves out
-            css( this._leftItem, this._layouts['outLeft'] );
-            css( this._nextItem, this._layouts['right'] );
+            this._css( this._leftItem, this._layouts['outLeft'] );
+            this._css( this._nextItem, this._layouts['right'] );
         }
         else {
-            this._leftItem.classList.add('og-transition');
+            this._setDuration(this._leftItem, this._duration);
             // left item moves right
-            css( this._leftItem, this._layouts['right'] );
+            this._css( this._leftItem, this._layouts['right'] );
         }
 
     }else{
@@ -92,48 +82,55 @@ Slider.prototype._move = function(dir){
             this._currIndex --;
         }
 
-        this._currItem.classList.add('og-transition');
-        this._leftItem.classList.add('og-transition');
+        this._setDuration(this._currItem, this._duration);
+        this._setDuration(this._leftItem, this._duration);
         // current item moves right
-        css( this._currItem, this._layouts['right'] );
+        this._css( this._currItem, this._layouts['right'] );
 
         // left item moves to the center
-        css( this._leftItem, this._layouts['center'] );
+        this._css( this._leftItem, this._layouts['center'] );
 
         // previous item moves to the left
         if( this._prevItem ) {
-            this._rightItem.classList.add('og-transition');
-            this._prevItem.classList.add('og-transition');
+            this._setDuration(this._rightItem, this._duration);
+            this._setDuration(this._prevItem, this._duration);
+
             // right item moves out
-            css( this._rightItem, this._layouts['outRight'] );
-            css( this._prevItem, this._layouts['left'] );
+            this._css( this._rightItem, this._layouts['outRight'] );
+            this._css( this._prevItem, this._layouts['left'] );
         }
         else {
-            this._rightItem.classList.add('og-transition');
+            this._setDuration(this._rightItem, this._duration);
             // right item moves left
-            css( this._rightItem, this._layouts['left'] );
+            this._css( this._rightItem, this._layouts['left'] );
         }
     }
     this._setItems();
 };
 //回滚原来位置
 Slider.prototype._fallback = function(){
-    this._currItem.classList.add('og-transition');
-    css(this._currItem, this._layouts['center']);
-    this._leftItem.classList.add('og-transition');
-    css(this._leftItem, this._layouts['left']);
-    this._rightItem.classList.add('og-transition');
-    css(this._rightItem, this._layouts['right']);
+    this._setDuration(this._currItem, this._duration);
+    this._css(this._currItem, this._layouts['center']);
+    this._setDuration(this._leftItem, this._duration);
+    this._css(this._leftItem, this._layouts['left']);
+    this._setDuration(this._rightItem, this._duration);
+    this._css(this._rightItem, this._layouts['right']);
     if(this._prevItem){
-        this._prevItem.classList.add('og-transition');
-        css(this._prevItem, this._layouts['outLeft']);
+        this._setDuration(this._prevItem, this._duration);
+        this._css(this._prevItem, this._layouts['outLeft']);
     }
     if(this._nextItem){
-        this._nextItem.classList.add('og-transition');
-        css(this._nextItem, this._layouts['outRight']);
+        this._setDuration(this._nextItem, this._duration);
+        this._css(this._nextItem, this._layouts['outRight']);
     }
 };
-Slider.prototype._touchStart = function(e){
+Slider.prototype._onTransitionEnd = function(){
+    for(var i= 0, len=this._items.length; i<len; i++){
+        this._setDuration(this._items[i], '0s');
+    }
+    this._animating	= false;
+};
+Slider.prototype._onTouchStart = function(e){
     if(this._animating){
         this._touching = false;
         return false;
@@ -145,51 +142,50 @@ Slider.prototype._touchStart = function(e){
     this._startTouch = e.targetTouches[0];
     e.stopPropagation();
 };
-Slider.prototype._touchMove = function(e){
+Slider.prototype._onTouchMove = function(e){
     if(!this._touching){
         return;
     }
     var currX = e.targetTouches[0].pageX;
     var delta = currX - this._startTouch.pageX;
     //动画过程百分比
-    var ratio = Math.abs(delta) / this._containerWidth;
+    var ratio = Math.abs(delta) / this._containerWidth * 1.5; //放大1.5倍，使触摸更明显
     if(ratio > 1){
         ratio = 1;
     }
-    console.log(ratio)
     if(delta > 0){
-        this._touchMoving(this._currItem, 'center', 'right', ratio);
-        this._touchMoving(this._leftItem, 'left', 'center', ratio);
-        this._touchMoving(this._rightItem, 'right', 'outRight', ratio);
+        this._touchMove(this._currItem, 'center', 'right', ratio);
+        this._touchMove(this._leftItem, 'left', 'center', ratio);
+        this._touchMove(this._rightItem, 'right', 'outRight', ratio);
         if(this._prevItem){
-            this._touchMoving(this._prevItem, 'outLeft', 'left', ratio);
+            this._touchMove(this._prevItem, 'outLeft', 'left', ratio);
         }
     }else{
-        this._touchMoving(this._currItem, 'center', 'left', ratio);
-        this._touchMoving(this._leftItem, 'left', 'outLeft', ratio);
-        this._touchMoving(this._rightItem, 'right', 'center', ratio);
+        this._touchMove(this._currItem, 'center', 'left', ratio);
+        this._touchMove(this._leftItem, 'left', 'outLeft', ratio);
+        this._touchMove(this._rightItem, 'right', 'center', ratio);
         if(this._nextItem){
-            this._touchMoving(this._nextItem, 'outRight', 'right', ratio);
+            this._touchMove(this._nextItem, 'outRight', 'right', ratio);
         }
     }
     e.stopPropagation();
 };
-Slider.prototype._touchMoving = function(elem, from, to, ratio){
-    var fromData = this._layoutDelta[from],
-        toData = this._layoutDelta[to];
+Slider.prototype._touchMove = function(elem, from, to, ratio){
+    var fromData = this._animates[from],
+        toData = this._animates[to];
 
     var transX = fromData.transform[0] + (toData.transform[0] - fromData.transform[0]) * ratio;
     var scale = fromData.transform[1] + (toData.transform[1] - fromData.transform[1]) * ratio;
     var opacity = fromData.opacity + (toData.opacity - fromData.opacity) * ratio;
     var zIndex = Math.round(fromData.zIndex + (toData.zIndex - fromData.zIndex) * ratio);
-    css(elem, {
+    this._css(elem, {
         webkitTransform: 'translate('+transX+'%) scale('+scale+')',
         transform: 'translate('+transX+'%) scale('+scale+')',
         opacity: opacity,
         zIndex: zIndex
     });
 };
-Slider.prototype._touchEnd = function(e){
+Slider.prototype._onTouchEnd = function(e){
     this._touching = false;
     var currX = e.changedTouches[0].pageX;
     var delta = currX - this._startTouch.pageX;
@@ -213,16 +209,27 @@ Slider.prototype._setItems = function(){
         this._prevItem = this._items[leftIndex === 0 ? this._itemsCount - 1 : leftIndex -1];
         this._nextItem = this._items[rightIndex === this._itemsCount - 1 ? 0 : rightIndex + 1];
 
-        css(this._prevItem, this._layouts['outLeft']);
-        css(this._nextItem, this._layouts['outRight']);
+        this._css(this._prevItem, this._layouts['outLeft']);
+        this._css(this._nextItem, this._layouts['outRight']);
     }
 };
 Slider.prototype._setLayout = function(){
     this._setItems();
 
-    css(this._leftItem, this._layouts['left']);
-    css(this._rightItem, this._layouts['right']);
-    css(this._currItem, this._layouts['center']);
+    this._css(this._leftItem, this._layouts['left']);
+    this._css(this._rightItem, this._layouts['right']);
+    this._css(this._currItem, this._layouts['center']);
+};
+Slider.prototype._css = function(elem, styles){
+    for(var k in styles){
+        elem.style[k] = styles[k];
+    }
+};
+Slider.prototype._setDuration = function(elem, duration){
+    this._css(elem, {
+        webkitTransitionDuration: duration,
+        transitionDuration: duration
+    })
 };
 Slider.prototype._layouts = {
     'outLeft': {
@@ -234,7 +241,7 @@ Slider.prototype._layouts = {
     'left': {
         webkitTransform: 'translate(-40%) scale(.8)',
         transform: 'translate(-40%) scale(.8)',
-        opacity:.8,
+        opacity:1,
         zIndex: 2
     },
     'center': {
@@ -246,7 +253,7 @@ Slider.prototype._layouts = {
     'right': {
         webkitTransform: 'translate(40%) scale(.8)',
         transform: 'translate(40%) scale(.8)',
-        opacity:.8,
+        opacity:1,
         zIndex: 2
     },
     'outRight': {
@@ -256,7 +263,7 @@ Slider.prototype._layouts = {
         zIndex: 1
     }
 };
-Slider.prototype._layoutDelta = {
+Slider.prototype._animates = {
     'outLeft': {
         transform: [-50,.7], //[translate(x%), scale]
         opacity: 0,
@@ -264,7 +271,7 @@ Slider.prototype._layoutDelta = {
     },
     'left': {
         transform: [-40,.8],
-        opacity: .8,
+        opacity: 1,
         zIndex: 2
     },
     'center': {
@@ -274,7 +281,7 @@ Slider.prototype._layoutDelta = {
     },
     'right': {
         transform: [40,.8],
-        opacity:.8,
+        opacity: 1,
         zIndex: 2
     },
     'outRight': {
@@ -283,5 +290,4 @@ Slider.prototype._layoutDelta = {
         zIndex: 1
     }
 };
-
 var slider = new Slider(container);
