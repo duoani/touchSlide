@@ -140,6 +140,7 @@ Slider.prototype._onTouchStart = function(e){
     }
     this._touching = true;
     this._startTouch = e.targetTouches[0];
+    this._startTime = (new Date()).getTime();
     e.stopPropagation();
 };
 Slider.prototype._onTouchMove = function(e){
@@ -187,9 +188,18 @@ Slider.prototype._touchMove = function(elem, from, to, ratio){
 };
 Slider.prototype._onTouchEnd = function(e){
     this._touching = false;
+    var currTime = (new Date()).getTime();
     var currX = e.changedTouches[0].pageX;
     var delta = currX - this._startTouch.pageX;
+    var distance = Math.abs(delta);
     var ratio = Math.abs(delta) / this._containerWidth;
+    if(ratio < .1 && currTime - this._startTime <= 350 && distance < 10){
+        if(currX <= this._containerWidth / 2){
+            this._move(-1);
+        }else{
+            this._move(1);
+        }
+    }
     if(ratio > .1){
         this._move(delta > 0 ? -1 : 1);
     }else{
